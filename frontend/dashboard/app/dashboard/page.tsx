@@ -166,7 +166,7 @@ export default function DashboardPage() {
           ) : (
             <div>
               {calls.map((call) => (
-                <div key={call.id} className="px-6 py-4 border-b border-zinc-800 last:border-0 flex justify-between items-center hover:bg-zinc-800/30 transition cursor-pointer">
+                <div key={call.id} onClick={() => router.push(`/dashboard/call/${call.id}`)} className="px-6 py-4 border-b border-zinc-800 last:border-0 flex justify-between items-center hover:bg-zinc-800/30 transition cursor-pointer">
                   <div>
                     <p className="font-medium text-sm">{call.title}</p>
                     <p className="text-zinc-500 text-xs mt-0.5">{call.prospect_name || 'No prospect'} · {formatDate(call.created_at)}</p>
