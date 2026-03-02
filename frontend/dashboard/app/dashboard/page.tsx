@@ -1,181 +1,359 @@
-'use client'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import PerfStrip from '@/components/PerfStrip'
+import ScoreRing from '@/components/ScoreRing'
+import CallsTable from '@/components/CallsTable'
+import type { CallRow } from '@/components/CallsTable'
+import type { PerfData } from '@/components/PerfStrip'
 
-import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+const PERF_CELLS: PerfData[] = [
+  {
+    icon: '◎',
+    label: 'Calls This Week',
+    value: 12,
+    delta: '4',
+    deltaType: 'up',
+    deltaLabel: 'vs last week',
+    fillWidth: 75,
+    fillColor: 'var(--accent)',
+  },
+  {
+    icon: '◈',
+    label: 'Close Signals',
+    value: 38,
+    accentColor: 'var(--accent)',
+    delta: '12',
+    deltaType: 'up',
+    deltaLabel: 'detected',
+    fillWidth: 88,
+    fillColor: 'var(--teal)',
+  },
+  {
+    icon: '★',
+    label: 'Avg Score',
+    value: 74,
+    delta: '6 pts',
+    deltaType: 'up',
+    deltaLabel: 'improvement',
+    fillWidth: 74,
+    fillColor: 'var(--accent)',
+  },
+  {
+    icon: '✓',
+    label: 'Deals Progressed',
+    value: 5,
+    delta: '2',
+    deltaType: 'up',
+    deltaLabel: 'this week',
+    fillWidth: 50,
+    fillColor: 'var(--green)',
+  },
+]
 
-interface Call {
-  id: string
-  title: string
-  prospect_name: string
-  score: number | null
-  status: string
-  created_at: string
-}
+const SCORE_PILLS = [
+  { label: '↑ Strong open', variant: 'teal' },
+  { label: '✓ Objections handled', variant: 'green' },
+  { label: '⚑ Price pushback', variant: 'amber' },
+  { label: '◈ 3 close signals', variant: 'slate' },
+] as const
 
-export default function DashboardPage() {
-  const [email, setEmail] = useState('')
-  const [calls, setCalls] = useState<Call[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showNewCall, setShowNewCall] = useState(false)
-  const [newCallTitle, setNewCallTitle] = useState('')
-  const [newCallProspect, setNewCallProspect] = useState('')
-  const router = useRouter()
-  const supabase = createClient()
+const SIGNAL_ROWS = [
+  {
+    type: 'teal',
+    icon: '◎',
+    text: 'Close signal detected — Marcus asked about onboarding timeline',
+    time: '04:12',
+  },
+  {
+    type: 'green',
+    icon: '✓',
+    text: 'Budget confirmed — "We have allocated Q1 budget for this"',
+    time: '11:38',
+  },
+  {
+    type: 'amber',
+    icon: '⚑',
+    text: 'Competitor mention — Prospect referenced Gong',
+    time: '18:54',
+  },
+  {
+    type: 'red',
+    icon: '⚠',
+    text: 'Risk: Stakeholder not present — decision delayed',
+    time: '31:07',
+  },
+]
 
-  useEffect(() => {
-    const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
-      setEmail(user.email || '')
-      const { data } = await supabase
-        .from('calls')
-        .select('*')
-        .order('created_at', { ascending: false })
-      setCalls(data || [])
-      setLoading(false)
-    }
-    init()
-  }, [])
+const WIN_RATE_BARS = [
+  { label: 'Discovery', pct: 82, color: 'var(--accent)' },
+  { label: 'Objections', pct: 65, color: 'var(--teal)' },
+  { label: 'Closing', pct: 48, color: 'var(--amber)' },
+]
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
+// Sparkline bars (mock data - replace with real)
+const SPARKLINE = [40, 55, 45, 70, 60, 80, 74]
 
-  const handleNewCall = async () => {
-    if (!newCallTitle) return
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data, error } = await supabase.from('calls').insert({
-      title: newCallTitle,
-      prospect_name: newCallProspect,
-      user_id: user?.id,
-      status: 'completed'
-    }).select().single()
-    if (!error && data) {
-      setCalls([data, ...calls])
-      setShowNewCall(false)
-      setNewCallTitle('')
-      setNewCallProspect('')
-    }
-  }
+export default async function DashboardPage() {
+  const supabase = createServerComponentClient({ cookies })
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric'
-    })
-  }
+  // Fetch calls from Supabase
+  const { data: rawCalls } = await supabase
+    .from('calls')
+    .select('id, prospect_name, company, created_at, duration, score, status')
+    .order('created_at', { ascending: false })
+    .limit(10)
 
-  const navStyle = {background: '#080827', borderBottom: '1px solid #0f2460'}
-  const cardStyle = {background: '#080827', border: '1px solid #0f2460', borderRadius: '16px'}
-  const inputStyle = {background: '#061434', color: '#E5E7EB', border: '1px solid #0f2460', borderRadius: '10px'}
+  const calls: CallRow[] = (rawCalls ?? []).map((c) => ({
+    id: c.id,
+    name: c.prospect_name ?? 'Unknown',
+    company: c.company ?? '—',
+    date: new Date(c.created_at).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    }),
+    duration: c.duration ?? '—',
+    score: c.score ?? 0,
+    status: c.status ?? 'done',
+  }))
+
+  const name = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'there'
+  const firstName = name.split(' ')[0]
+
+  const now = new Date()
+  const weekLabel = `Week of ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
 
   return (
-    <div className="min-h-screen" style={{background: '#061434', color: '#E5E7EB'}}>
-      <nav className="px-8 py-4 flex justify-between items-center" style={navStyle}>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold text-white" style={{background: '#10B981'}}>S</div>
-          <span className="font-semibold text-lg">SalesWhisper</span>
+    <>
+      {/* Page header */}
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1
+            className="text-[18px] font-bold mb-[3px]"
+            style={{ letterSpacing: '-0.04em', color: 'var(--text)' }}
+          >
+            Good morning, {firstName}
+          </h1>
+          <p className="text-[12px]" style={{ color: 'var(--text-2)' }}>
+            {weekLabel} · {calls.length} calls logged
+          </p>
         </div>
-        <div className="flex items-center gap-6">
-          <a href="/settings" className="text-sm hover:opacity-80 transition" style={{color: '#9CA3AF'}}>Settings</a>
-          <span className="text-sm" style={{color: '#9CA3AF'}}>{email}</span>
-          <button onClick={handleLogout} className="px-4 py-2 rounded-lg text-sm transition hover:opacity-80" style={{background: '#0f2460', color: '#E5E7EB'}}>
-            Sign out
+        <div className="flex gap-2 items-center">
+          <button
+            className="inline-flex items-center gap-[5px] px-[14px] py-[7px] rounded-[5px] text-[12px] font-semibold transition-all duration-150 font-[inherit] cursor-pointer"
+            style={{
+              background: 'transparent',
+              color: 'var(--text-2)',
+              border: '1px solid var(--border-md)',
+            }}
+          >
+            ↓ Export Report
+          </button>
+          <button
+            className="inline-flex items-center gap-[5px] px-[14px] py-[7px] rounded-[5px] text-[12px] font-semibold transition-all duration-150 font-[inherit] cursor-pointer"
+            style={{
+              background: 'var(--accent)',
+              color: '#0A0F1C',
+              border: '1px solid var(--accent)',
+            }}
+          >
+            + Log Call
           </button>
         </div>
-      </nav>
+      </div>
 
-      <div className="px-8 py-8 max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="mt-1 text-sm" style={{color: '#9CA3AF'}}>Welcome back! Here's your sales performance.</p>
-        </div>
+      {/* KPI strip */}
+      <PerfStrip cells={PERF_CELLS} />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          {[
-            { label: 'Total Calls', value: calls.length, sub: calls.length === 0 ? 'Start your first call' : 'Total recorded' },
-            { label: 'Avg. Call Score', value: calls.filter(c => c.score).length > 0 ? Math.round(calls.reduce((a, c) => a + (c.score || 0), 0) / calls.filter(c => c.score).length) : '—', sub: 'Out of 100' },
-            { label: 'Deals Closed', value: 0, sub: 'Keep pushing!' }
-          ].map((stat) => (
-            <div key={stat.label} className="p-6" style={cardStyle}>
-              <p className="text-sm" style={{color: '#9CA3AF'}}>{stat.label}</p>
-              <p className="text-3xl font-bold mt-1" style={{color: '#E5E7EB'}}>{stat.value}</p>
-              <p className="text-xs mt-2" style={{color: '#6B7280'}}>{stat.sub}</p>
-            </div>
-          ))}
-        </div>
+      {/* Score hero */}
+      <div
+        className="flex items-center gap-5 rounded-[10px] p-5 mb-5"
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+        }}
+      >
+        <ScoreRing score={74} size={80} />
 
-        <div style={cardStyle}>
-          <div className="px-6 py-4 flex justify-between items-center" style={{borderBottom: '1px solid #0f2460'}}>
-            <h2 className="font-semibold">Recent Calls</h2>
-            <button onClick={() => setShowNewCall(true)} className="px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90" style={{background: '#10B981', color: '#fff'}}>
-              + New Call
-            </button>
-          </div>
-
-          {showNewCall && (
-            <div className="px-6 py-4" style={{borderBottom: '1px solid #0f2460', background: '#061434'}}>
-              <p className="text-sm font-semibold mb-3">New Call</p>
-              <input
-                type="text"
-                placeholder="Call title (e.g. Discovery call with Acme)"
-                value={newCallTitle}
-                onChange={(e) => setNewCallTitle(e.target.value)}
-                className="w-full px-4 py-2 mb-2 text-sm outline-none"
-                style={inputStyle}
-              />
-              <input
-                type="text"
-                placeholder="Prospect name (optional)"
-                value={newCallProspect}
-                onChange={(e) => setNewCallProspect(e.target.value)}
-                className="w-full px-4 py-2 mb-3 text-sm outline-none"
-                style={inputStyle}
-              />
-              <div className="flex gap-2">
-                <button onClick={handleNewCall} className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90" style={{background: '#10B981', color: '#fff'}}>Save</button>
-                <button onClick={() => setShowNewCall(false)} className="px-4 py-2 rounded-lg text-sm hover:opacity-80" style={{background: '#0f2460', color: '#E5E7EB'}}>Cancel</button>
-              </div>
-            </div>
-          )}
-
-          {loading ? (
-            <div className="px-6 py-12 text-center">
-              <p className="text-sm" style={{color: '#6B7280'}}>Loading...</p>
-            </div>
-          ) : calls.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <p className="text-sm" style={{color: '#6B7280'}}>No calls recorded yet.</p>
-              <p className="text-xs mt-1" style={{color: '#4B5563'}}>Click + New Call to add your first call.</p>
-            </div>
-          ) : (
-            calls.map((call) => (
-              <div
-                key={call.id}
-                onClick={() => router.push(`/dashboard/call/${call.id}`)}
-                className="px-6 py-4 flex justify-between items-center cursor-pointer transition"
-                style={{borderBottom: '1px solid #0f2460'}}
-                onMouseEnter={e => (e.currentTarget.style.background = '#0a1d4a')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        <div className="flex-1">
+          <h2
+            className="text-[15px] font-bold mb-1"
+            style={{ letterSpacing: '-0.02em', color: 'var(--text)' }}
+          >
+            Weekly Performance Score
+          </h2>
+          <p className="text-[12px] mb-[10px]" style={{ color: 'var(--text-2)' }}>
+            Based on 12 calls · Above your 30-day average
+          </p>
+          <div className="flex gap-[6px] flex-wrap">
+            {SCORE_PILLS.map((p) => (
+              <span
+                key={p.label}
+                className="inline-flex items-center gap-1 px-2 py-[3px] rounded-[4px] text-[11px] font-medium"
+                style={
+                  p.variant === 'teal'
+                    ? { background: 'var(--teal-dim)', color: 'var(--teal)', border: '1px solid var(--teal-border)' }
+                    : p.variant === 'green'
+                    ? { background: 'var(--green-dim)', color: 'var(--green)', border: '1px solid var(--green-border)' }
+                    : p.variant === 'amber'
+                    ? { background: 'var(--amber-dim)', color: 'var(--amber)', border: '1px solid var(--amber-border)' }
+                    : { background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent-border)' }
+                }
               >
-                <div>
-                  <p className="font-medium text-sm">{call.title}</p>
-                  <p className="text-xs mt-0.5" style={{color: '#6B7280'}}>{call.prospect_name || 'No prospect'} · {formatDate(call.created_at)}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  {call.score && (
-                    <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{background: call.score >= 70 ? '#052e16' : '#422006', color: call.score >= 70 ? '#10B981' : '#f59e0b'}}>
-                      {call.score}/100
-                    </span>
-                  )}
-                  <span className="text-xs px-2 py-1 rounded-full" style={{background: '#0f2460', color: '#9CA3AF'}}>{call.status}</span>
-                </div>
-              </div>
-            ))
-          )}
+                {p.label}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Sparkline */}
+        <div className="flex flex-col items-end gap-1 ml-auto">
+          <div
+            className="text-[10px] font-semibold uppercase"
+            style={{ letterSpacing: '0.06em', color: 'var(--text-3)' }}
+          >
+            Score trend
+          </div>
+          <div className="flex items-end gap-[2px] h-8">
+            {SPARKLINE.map((v, i) => (
+              <div
+                key={i}
+                className="w-[5px] rounded-[1px_1px_0_0]"
+                style={{
+                  height: `${v}%`,
+                  background: i === SPARKLINE.length - 1 ? 'var(--accent)' : 'var(--surface-3)',
+                  transition: 'height 0.3s',
+                }}
+              />
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Main grid: calls table + right widgets */}
+      <div
+        className="grid gap-4 mb-4"
+        style={{ gridTemplateColumns: '1fr 340px' }}
+      >
+        <CallsTable calls={calls} />
+
+        {/* Right column widgets */}
+        <div>
+          {/* Live Signals */}
+          <div
+            className="rounded-[10px] p-4 mb-3"
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <div
+              className="text-[10px] font-bold uppercase flex items-center justify-between mb-3"
+              style={{ letterSpacing: '0.09em', color: 'var(--text-3)' }}
+            >
+              Live Signals
+              <span
+                className="text-[10px] font-medium normal-case"
+                style={{ letterSpacing: 0, color: 'var(--text-2)' }}
+              >
+                Today
+              </span>
+            </div>
+            <div className="flex flex-col gap-[7px]">
+              {SIGNAL_ROWS.map((sig, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-[9px] px-[10px] py-[7px] rounded-[6px] relative overflow-hidden"
+                  style={{
+                    background:
+                      sig.type === 'teal'
+                        ? 'var(--teal-dim)'
+                        : sig.type === 'green'
+                        ? 'var(--green-dim)'
+                        : sig.type === 'amber'
+                        ? 'var(--amber-dim)'
+                        : 'var(--red-dim)',
+                    border: '1px solid var(--border)',
+                    borderLeft: `2px solid var(--${sig.type})`,
+                  }}
+                >
+                  <div
+                    className="w-[22px] h-[22px] rounded-[4px] flex items-center justify-center text-[11px] flex-shrink-0"
+                    style={{ background: 'rgba(255,255,255,0.04)' }}
+                  >
+                    {sig.icon}
+                  </div>
+                  <div
+                    className="text-[11.5px] leading-[1.4] flex-1"
+                    style={{ color: 'var(--text)' }}
+                  >
+                    {sig.text}
+                  </div>
+                  <div
+                    className="text-[9.5px] flex-shrink-0"
+                    style={{ color: 'var(--text-3)' }}
+                  >
+                    {sig.time}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Win Rate Breakdown */}
+          <div
+            className="rounded-[10px] p-4"
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <div
+              className="text-[10px] font-bold uppercase mb-3"
+              style={{ letterSpacing: '0.09em', color: 'var(--text-3)' }}
+            >
+              Skill Breakdown
+            </div>
+            <div className="flex flex-col gap-[10px]">
+              {WIN_RATE_BARS.map((bar) => (
+                <div key={bar.label} className="flex items-center gap-2">
+                  <div
+                    className="flex items-center gap-[8px] flex-1"
+                  >
+                    <div className="flex-1 h-1 rounded-[2px]" style={{ background: 'var(--surface-3)' }}>
+                      <div
+                        className="h-full rounded-[2px]"
+                        style={{ width: `${bar.pct}%`, background: bar.color }}
+                      />
+                    </div>
+                  </div>
+                  <div
+                    className="text-[11px] font-bold min-w-[28px] text-right"
+                    style={{ color: 'var(--text)' }}
+                  >
+                    {bar.pct}%
+                  </div>
+                </div>
+              ))}
+              {/* Labels below */}
+              <div className="flex flex-col gap-[6px] mt-1">
+                {WIN_RATE_BARS.map((bar) => (
+                  <div key={bar.label} className="flex items-center justify-between">
+                    <span className="text-[11px]" style={{ color: 'var(--text-2)' }}>
+                      {bar.label}
+                    </span>
+                    <span className="text-[11px] font-bold" style={{ color: 'var(--text)' }}>
+                      {bar.pct}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
   )
 }

@@ -1,28 +1,168 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-* {
+/* ── Design System CSS Variables ── */
+:root {
+  --bg: #0A0F1C;
+  --surface: #0E1525;
+  --surface-2: #131929;
+  --surface-3: #1A2235;
+  --border: rgba(255, 255, 255, 0.06);
+  --border-md: rgba(255, 255, 255, 0.10);
+  --text: #E5E7EB;
+  --text-2: #94A3B8;
+  --text-3: #4B5A72;
+  --accent: #8B9DB5;
+  --accent-dim: rgba(139, 157, 181, 0.08);
+  --accent-border: rgba(139, 157, 181, 0.22);
+  --teal: #00C2A8;
+  --teal-dim: rgba(0, 194, 168, 0.08);
+  --teal-border: rgba(0, 194, 168, 0.25);
+  --green: #22C55E;
+  --green-dim: rgba(34, 197, 94, 0.07);
+  --green-border: rgba(34, 197, 94, 0.2);
+  --amber: #F59E0B;
+  --amber-dim: rgba(245, 158, 11, 0.07);
+  --amber-border: rgba(245, 158, 11, 0.25);
+  --red: #EF4444;
+  --red-dim: rgba(239, 68, 68, 0.07);
+  --red-border: rgba(239, 68, 68, 0.2);
+}
+
+/* ── Base Reset ── */
+*, *::before, *::after {
   box-sizing: border-box;
+}
+
+html, body {
   margin: 0;
   padding: 0;
 }
 
 body {
-  background-color: #061434;
-  color: #E5E7EB;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-::-webkit-scrollbar {
-  width: 6px;
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.07); border-radius: 2px; }
+
+/* ── Animations ── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
 }
 
-::-webkit-scrollbar-track {
-  background: #080827;
+@keyframes wave {
+  0%, 100% { height: 3px; opacity: 0.4; }
+  50% { height: 10px; opacity: 1; }
 }
 
-::-webkit-scrollbar-thumb {
-  background: #10B981;
-  border-radius: 3px;
+/* ── Utility classes not covered by Tailwind ── */
+@layer utilities {
+  /* Active sidebar item indicator */
+  .sb-active-bar::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 0 2px 2px 0;
+  }
+
+  /* Perf bar bottom accent */
+  .perf-bar-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--border);
+  }
+
+  /* Numeric tabular figures */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Score ring rotation */
+  .ring-rotate {
+    transform: rotate(-90deg);
+  }
+
+  /* Timeline axis */
+  .tl-axis {
+    position: absolute;
+    left: 7px;
+    top: 8px;
+    bottom: 8px;
+    width: 1px;
+    background: var(--border);
+  }
+
+  /* Pulse animation */
+  .animate-pulse-dot {
+    animation: pulse-dot 2s infinite;
+  }
+
+  /* Wave bars */
+  .wave-bar {
+    width: 2px;
+    border-radius: 1px;
+    background: var(--teal);
+    animation: wave 1.2s ease-in-out infinite;
+  }
+  .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+  .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+  .wave-bar:nth-child(4) { animation-delay: 0.15s; }
+  .wave-bar:nth-child(5) { animation-delay: 0.05s; }
+
+  /* Highlighted transcript line */
+  .tr-highlight {
+    background: rgba(0, 194, 168, 0.07);
+    border-left: 2px solid var(--teal);
+    padding: 7px 10px;
+    border-radius: 0 5px 5px 0;
+    margin-left: -4px;
+  }
+
+  /* Summary highlight block */
+  .summary-highlight {
+    background: rgba(0, 194, 168, 0.07);
+    border-left: 2px solid var(--teal);
+    padding: 10px 12px;
+    border-radius: 0 5px 5px 0;
+  }
+
+  /* Objection item */
+  .obj-item {
+    padding: 8px 10px;
+    background: var(--red-dim);
+    border: 1px solid var(--red-border);
+    border-left: 2px solid var(--red);
+    border-radius: 0 5px 5px 0;
+    font-size: 11.5px;
+    line-height: 1.45;
+  }
+
+  /* Letter spacing utilities */
+  .tracking-widest-sm { letter-spacing: 0.08em; }
+  .tracking-widest-xs { letter-spacing: 0.05em; }
+  .tracking-widest-lg { letter-spacing: 0.10em; }
+  .tracking-tight-sm { letter-spacing: -0.02em; }
+  .tracking-tight-md { letter-spacing: -0.03em; }
+  .tracking-tight-lg { letter-spacing: -0.04em; }
+  .tracking-tight-xl { letter-spacing: -0.05em; }
 }
