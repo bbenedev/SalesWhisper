@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import StatusPill from './StatusPill'
+import StatusPill from './statuspill'
 
 export interface CallRow {
   id: string

@@ -1,10 +1,10 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import PerfStrip from '@/components/PerfStrip'
-import ScoreRing from '@/components/ScoreRing'
-import CallsTable from '@/components/CallsTable'
-import type { CallRow } from '@/components/CallsTable'
-import type { PerfData } from '@/components/PerfStrip'
+import PerfStrip from '@/components/perfstrip'
+import ScoreRing from '@/components/scorering'
+import CallsTable from '@/components/callstable'
+import type { CallRow } from '@/components/callstable'
+import type { PerfData } from '@/components/perfstrip'
 
 const PERF_CELLS: PerfData[] = [
   {
@@ -90,16 +90,23 @@ const WIN_RATE_BARS = [
   { label: 'Closing', pct: 48, color: 'var(--amber)' },
 ]
 
-// Sparkline bars (mock data - replace with real)
 const SPARKLINE = [40, 55, 45, 70, 60, 80, 74]
 
 export default async function DashboardPage() {
-  const supabase = createServerComponentClient({ cookies })
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll() },
+        setAll() {},
+      },
+    }
+  )
 
-  // Fetch calls from Supabase
+  const { data: { user } } = await supabase.auth.getUser()
+
   const { data: rawCalls } = await supabase
     .from('calls')
     .select('id, prospect_name, company, created_at, duration, score, status')
@@ -239,25 +246,18 @@ export default async function DashboardPage() {
       >
         <CallsTable calls={calls} />
 
-        {/* Right column widgets */}
         <div>
           {/* Live Signals */}
           <div
             className="rounded-[10px] p-4 mb-3"
-            style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-            }}
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
           >
             <div
               className="text-[10px] font-bold uppercase flex items-center justify-between mb-3"
               style={{ letterSpacing: '0.09em', color: 'var(--text-3)' }}
             >
               Live Signals
-              <span
-                className="text-[10px] font-medium normal-case"
-                style={{ letterSpacing: 0, color: 'var(--text-2)' }}
-              >
+              <span className="text-[10px] font-medium normal-case" style={{ letterSpacing: 0, color: 'var(--text-2)' }}>
                 Today
               </span>
             </div>
@@ -265,16 +265,13 @@ export default async function DashboardPage() {
               {SIGNAL_ROWS.map((sig, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-[9px] px-[10px] py-[7px] rounded-[6px] relative overflow-hidden"
+                  className="flex items-center gap-[9px] px-[10px] py-[7px] rounded-[6px]"
                   style={{
                     background:
-                      sig.type === 'teal'
-                        ? 'var(--teal-dim)'
-                        : sig.type === 'green'
-                        ? 'var(--green-dim)'
-                        : sig.type === 'amber'
-                        ? 'var(--amber-dim)'
-                        : 'var(--red-dim)',
+                      sig.type === 'teal' ? 'var(--teal-dim)'
+                      : sig.type === 'green' ? 'var(--green-dim)'
+                      : sig.type === 'amber' ? 'var(--amber-dim)'
+                      : 'var(--red-dim)',
                     border: '1px solid var(--border)',
                     borderLeft: `2px solid var(--${sig.type})`,
                   }}
@@ -285,16 +282,10 @@ export default async function DashboardPage() {
                   >
                     {sig.icon}
                   </div>
-                  <div
-                    className="text-[11.5px] leading-[1.4] flex-1"
-                    style={{ color: 'var(--text)' }}
-                  >
+                  <div className="text-[11.5px] leading-[1.4] flex-1" style={{ color: 'var(--text)' }}>
                     {sig.text}
                   </div>
-                  <div
-                    className="text-[9.5px] flex-shrink-0"
-                    style={{ color: 'var(--text-3)' }}
-                  >
+                  <div className="text-[9.5px] flex-shrink-0" style={{ color: 'var(--text-3)' }}>
                     {sig.time}
                   </div>
                 </div>
@@ -302,13 +293,10 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Win Rate Breakdown */}
+          {/* Skill Breakdown */}
           <div
             className="rounded-[10px] p-4"
-            style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-            }}
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
           >
             <div
               className="text-[10px] font-bold uppercase mb-3"
@@ -318,38 +306,18 @@ export default async function DashboardPage() {
             </div>
             <div className="flex flex-col gap-[10px]">
               {WIN_RATE_BARS.map((bar) => (
-                <div key={bar.label} className="flex items-center gap-2">
-                  <div
-                    className="flex items-center gap-[8px] flex-1"
-                  >
-                    <div className="flex-1 h-1 rounded-[2px]" style={{ background: 'var(--surface-3)' }}>
-                      <div
-                        className="h-full rounded-[2px]"
-                        style={{ width: `${bar.pct}%`, background: bar.color }}
-                      />
-                    </div>
+                <div key={bar.label} className="flex items-center justify-between gap-3">
+                  <span className="text-[11px] w-[70px] flex-shrink-0" style={{ color: 'var(--text-2)' }}>
+                    {bar.label}
+                  </span>
+                  <div className="flex-1 h-[3px] rounded-[2px]" style={{ background: 'var(--surface-3)' }}>
+                    <div className="h-full rounded-[2px]" style={{ width: `${bar.pct}%`, background: bar.color }} />
                   </div>
-                  <div
-                    className="text-[11px] font-bold min-w-[28px] text-right"
-                    style={{ color: 'var(--text)' }}
-                  >
+                  <span className="text-[11px] font-bold min-w-[28px] text-right" style={{ color: 'var(--text)' }}>
                     {bar.pct}%
-                  </div>
+                  </span>
                 </div>
               ))}
-              {/* Labels below */}
-              <div className="flex flex-col gap-[6px] mt-1">
-                {WIN_RATE_BARS.map((bar) => (
-                  <div key={bar.label} className="flex items-center justify-between">
-                    <span className="text-[11px]" style={{ color: 'var(--text-2)' }}>
-                      {bar.label}
-                    </span>
-                    <span className="text-[11px] font-bold" style={{ color: 'var(--text)' }}>
-                      {bar.pct}%
-                    </span>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
