@@ -26,10 +26,13 @@ export default async function DashboardLayout({
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const name =
-    user?.user_metadata?.full_name ??
-    user?.email?.split('@')[0] ??
-    'User'
+  // Use full_name if set, otherwise use the part before @ in email
+  const rawName = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'User'
+  // Capitalize first letter, replace dots/underscores with spaces
+  const name = rawName
+    .replace(/[._]/g, ' ')
+    .replace(/\b\w/g, (c: string) => c.toUpperCase())
+    .trim()
 
   const initials = name
     .split(' ')
@@ -38,15 +41,32 @@ export default async function DashboardLayout({
     .join('')
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" style={{ background: 'var(--bg)' }}>
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar userName={name} userRole="Sales Rep" userInitials={initials || 'U'} />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <Topbar userInitials={initials || 'U'} extensionLive={false} hasNotification={true} />
-          <main className="flex-1 overflow-y-auto p-6" style={{ background: 'var(--bg)' }}>
-            {children}
-          </main>
-        </div>
+    <div
+      style={{
+        display: 'flex',
+        height: '100vh',
+        overflow: 'hidden',
+        background: 'var(--bg)',
+      }}
+    >
+      <Sidebar userName={name} userRole="Sales Rep" userInitials={initials || 'U'} />
+
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minWidth: 0 }}>
+        <Topbar
+          userInitials={initials || 'U'}
+          extensionLive={false}
+          hasNotification={true}
+        />
+        <main
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '28px 28px',
+            background: 'var(--bg)',
+          }}
+        >
+          {children}
+        </main>
       </div>
     </div>
   )

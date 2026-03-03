@@ -1,5 +1,5 @@
 interface ScoreRingProps {
-  score: number // 0-100
+  score: number
   size?: number
   strokeWidth?: number
   color?: string
@@ -18,28 +18,35 @@ export default function ScoreRing({
   const r = (size - strokeWidth * 2) / 2
   const circumference = 2 * Math.PI * r
   const offset = circumference - (score / 100) * circumference
+  const center = size / 2
 
   return (
-    <div className={`relative flex-shrink-0 ${className}`} style={{ width: size, height: size }}>
+    <div
+      className={className}
+      style={{
+        position: 'relative',
+        width: size,
+        height: size,
+        flexShrink: 0,
+      }}
+    >
       <svg
         width={size}
         height={size}
         viewBox={`0 0 ${size} ${size}`}
-        style={{ transform: 'rotate(-90deg)' }}
+        style={{ transform: 'rotate(-90deg)', display: 'block' }}
       >
-        {/* Background track */}
         <circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={center}
+          cy={center}
           r={r}
           fill="none"
           stroke="var(--surface-3)"
           strokeWidth={strokeWidth}
         />
-        {/* Score fill */}
         <circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={center}
+          cy={center}
           r={r}
           fill="none"
           stroke={color}
@@ -50,10 +57,23 @@ export default function ScoreRing({
           style={{ transition: 'stroke-dashoffset 1s ease' }}
         />
       </svg>
-      {/* Center text */}
+      {/* Score number — centered absolutely over SVG */}
       <div
-        className="absolute inset-0 flex items-center justify-center font-extrabold"
-        style={{ fontSize, letterSpacing: '-0.05em', color: 'var(--text)' }}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize,
+          fontWeight: 800,
+          letterSpacing: '-0.05em',
+          color: 'var(--text)',
+          lineHeight: 1,
+        }}
       >
         {score}
       </div>

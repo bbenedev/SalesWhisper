@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
 
 const NAV_SECTIONS = [
   {
@@ -35,65 +36,60 @@ interface SidebarProps {
   userInitials?: string
 }
 
-export default function Sidebar({
-  userName = 'User',
-  userRole = 'Sales Rep',
-  userInitials = 'U',
-}: SidebarProps) {
+export default function Sidebar({ userName = 'User', userRole = 'Sales Rep', userInitials = 'U' }: SidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
+  const supabase = createClient()
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard'
     return pathname.startsWith(href)
   }
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
+
   return (
-    <aside
-      className="w-[210px] flex-shrink-0 flex flex-col"
-      style={{
-        background: 'var(--surface)',
-        borderRight: '1px solid var(--border)',
-      }}
-    >
+    <aside style={{
+      width: '210px', flexShrink: 0, display: 'flex', flexDirection: 'column',
+      height: '100%', background: 'var(--surface)', borderRight: '1px solid var(--border)',
+    }}>
       {/* Brand */}
-      <div
-        className="flex items-center gap-[10px] px-4 py-[18px]"
-        style={{ borderBottom: '1px solid var(--border)' }}
-      >
-        <div
-          className="w-7 h-7 rounded-[6px] flex items-center justify-center text-[12px] font-extrabold flex-shrink-0"
-          style={{
-            background: 'linear-gradient(135deg, #8B9DB5, #6B7F9A)',
-            color: '#0A0F1C',
-            letterSpacing: '-0.05em',
-          }}
-        >
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '18px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0,
+      }}>
+        <div style={{
+          width: '28px', height: '28px', borderRadius: '7px', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '11px', fontWeight: 800,
+          background: 'linear-gradient(135deg, #8B9DB5, #6B7F9A)',
+          color: '#0A0F1C', letterSpacing: '-0.05em',
+        }}>
           SW
         </div>
-        <div className="flex flex-col leading-none">
-          <span
-            className="text-[13px] font-bold"
-            style={{ letterSpacing: '-0.03em', color: 'var(--text)' }}
-          >
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+          <span style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text)' }}>
             SalesWhisper
           </span>
-          <span
-            className="text-[9px] font-medium uppercase mt-[1px]"
-            style={{ letterSpacing: '0.05em', color: 'var(--text-3)' }}
-          >
+          <span style={{ fontSize: '9px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginTop: '2px' }}>
             Enterprise
           </span>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-2 overflow-y-auto">
+      <nav style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
         {NAV_SECTIONS.map((section) => (
-          <div key={section.label} className="mb-5">
-            <p
-              className="text-[9px] font-semibold uppercase px-2 mb-1"
-              style={{ letterSpacing: '0.1em', color: 'var(--text-3)' }}
-            >
+          <div key={section.label} style={{ marginBottom: '20px' }}>
+            <p style={{
+              fontSize: '9px', fontWeight: 600, textTransform: 'uppercase',
+              letterSpacing: '0.12em', color: 'var(--text-3)',
+              padding: '0 8px', marginBottom: '6px', margin: '0 0 6px',
+            }}>
               {section.label}
             </p>
             {section.items.map((item) => {
@@ -102,16 +98,18 @@ export default function Sidebar({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="relative flex items-center gap-[9px] px-[9px] py-[7px] rounded-[6px] mb-[1px] transition-all duration-100 no-underline"
                   style={{
+                    position: 'relative', display: 'flex', alignItems: 'center',
+                    gap: '9px', padding: '8px 10px', borderRadius: '7px',
+                    marginBottom: '2px', textDecoration: 'none', fontSize: '12.5px',
+                    fontWeight: active ? 500 : 400,
                     background: active ? 'var(--accent-dim)' : 'transparent',
                     color: active ? 'var(--text)' : 'var(--text-2)',
-                    fontWeight: active ? 500 : 450,
-                    fontSize: '12.5px',
+                    transition: 'background 0.12s, color 0.12s',
                   }}
                   onMouseEnter={(e) => {
                     if (!active) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
                       e.currentTarget.style.color = 'var(--text)'
                     }
                   }}
@@ -122,32 +120,27 @@ export default function Sidebar({
                     }
                   }}
                 >
-                  {/* Active indicator bar */}
                   {active && (
-                    <span
-                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-4 rounded-[0_2px_2px_0]"
-                      style={{ background: 'var(--accent)' }}
-                    />
+                    <span style={{
+                      position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
+                      width: '2px', height: '16px', background: 'var(--accent)',
+                      borderRadius: '0 2px 2px 0',
+                    }} />
                   )}
-                  <span
-                    className="w-[15px] text-center text-[13px] flex-shrink-0"
-                    style={{
-                      opacity: active ? 1 : 0.7,
-                      color: active ? 'var(--accent)' : undefined,
-                    }}
-                  >
+                  <span style={{
+                    width: '15px', textAlign: 'center', fontSize: '13px', flexShrink: 0,
+                    color: active ? 'var(--accent)' : 'inherit',
+                    opacity: active ? 1 : 0.65,
+                  }}>
                     {item.icon}
                   </span>
-                  {item.label}
-                  {item.badge && (
-                    <span
-                      className="ml-auto text-[9.5px] font-semibold px-[5px] py-[1px] rounded-[10px]"
-                      style={{
-                        background: 'var(--surface-3)',
-                        color: 'var(--text-3)',
-                        border: '1px solid var(--border)',
-                      }}
-                    >
+                  <span style={{ flex: 1 }}>{item.label}</span>
+                  {'badge' in item && item.badge && (
+                    <span style={{
+                      fontSize: '9.5px', fontWeight: 600, padding: '1px 5px',
+                      borderRadius: '10px', background: 'var(--surface-3)',
+                      color: 'var(--text-3)', border: '1px solid var(--border)',
+                    }}>
                       {item.badge}
                     </span>
                   )}
@@ -158,45 +151,38 @@ export default function Sidebar({
         ))}
       </nav>
 
-      {/* Footer / User */}
-      <div
-        className="p-2"
-        style={{ borderTop: '1px solid var(--border)' }}
-      >
+      {/* Footer */}
+      <div style={{ padding: '8px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
         <div
-          className="flex items-center gap-2 px-[9px] py-[7px] rounded-[6px] cursor-pointer transition-colors duration-100"
-          style={{ color: 'var(--text)' }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')
-          }
+          onClick={handleSignOut}
+          title="Sign out"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '8px 10px', borderRadius: '7px', cursor: 'pointer',
+            transition: 'background 0.12s',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
           onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
         >
-          <div
-            className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, #1C2A45, #253452)',
-              border: '1px solid var(--accent-border)',
-              color: 'var(--accent)',
-            }}
-          >
+          <div style={{
+            width: '26px', height: '26px', borderRadius: '50%', flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '10px', fontWeight: 700,
+            background: 'linear-gradient(135deg, #1C2A45, #253452)',
+            border: '1px solid var(--accent-border)', color: 'var(--accent)',
+          }}>
             {userInitials}
           </div>
-          <div>
-            <div className="text-[12px] font-medium" style={{ color: 'var(--text)' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {userName}
             </div>
-            <div className="text-[10px]" style={{ color: 'var(--text-3)' }}>
-              {userRole}
-            </div>
+            <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>{userRole}</div>
           </div>
-          {/* Online dot */}
-          <div
-            className="ml-auto w-[6px] h-[6px] rounded-full"
-            style={{
-              background: 'var(--green)',
-              boxShadow: '0 0 5px rgba(34,197,94,0.4)',
-            }}
-          />
+          <div style={{
+            width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
+            background: 'var(--green)', boxShadow: '0 0 5px rgba(34,197,94,0.4)',
+          }} />
         </div>
       </div>
     </aside>

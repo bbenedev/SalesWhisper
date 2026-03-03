@@ -13,69 +13,93 @@ export default function Topbar({
 }: TopbarProps) {
   return (
     <header
-      className="flex items-center justify-between px-6 py-[11px] flex-shrink-0"
+      className="flex items-center justify-between px-6 flex-shrink-0"
       style={{
+        height: '52px',
         background: 'var(--surface)',
         borderBottom: '1px solid var(--border)',
       }}
     >
       {/* Search */}
       <div
-        className="flex items-center gap-[7px] px-[11px] py-[6px] w-[260px] rounded-[6px] transition-colors duration-150 focus-within:border-[var(--border-md)]"
+        className="flex items-center gap-2 px-3 rounded-[6px] transition-all duration-150"
         style={{
+          width: '260px',
+          height: '32px',
           background: 'var(--surface-2)',
           border: '1px solid var(--border)',
         }}
+        onFocus={() => {}}
       >
-        <span className="text-[12px]" style={{ color: 'var(--text-3)' }}>
-          ⌕
-        </span>
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0 }}>
+          <circle cx="5.5" cy="5.5" r="4.5" stroke="var(--text-3)" strokeWidth="1.2"/>
+          <path d="M9 9L12 12" stroke="var(--text-3)" strokeWidth="1.2" strokeLinecap="round"/>
+        </svg>
         <input
           type="text"
           placeholder="Search calls, prospects, signals…"
-          className="bg-transparent border-none outline-none text-[12px] w-full font-[inherit]"
-          style={{ color: 'var(--text)' }}
+          className="bg-transparent border-none outline-none w-full font-[inherit]"
+          style={{ fontSize: '12px', color: 'var(--text-2)' }}
         />
       </div>
 
-      {/* Right actions */}
-      <div className="flex items-center gap-[10px]">
-        {/* Extension Live chip */}
+      {/* Right */}
+      <div className="flex items-center gap-2">
+        {/* Extension Live */}
         {extensionLive && (
           <div
-            className="flex items-center gap-[6px] px-[11px] py-[5px] rounded-[5px] text-[11px] font-semibold"
+            className="flex items-center gap-[6px] px-3 py-[5px] rounded-[5px] text-[11px] font-semibold"
             style={{
               background: 'var(--teal-dim)',
               border: '1px solid var(--teal-border)',
               color: 'var(--teal)',
-              letterSpacing: '0.01em',
             }}
           >
             <span
-              className="w-[5px] h-[5px] rounded-full animate-pulse-dot"
-              style={{ background: 'var(--teal)' }}
+              className="w-[5px] h-[5px] rounded-full"
+              style={{
+                background: 'var(--teal)',
+                animation: 'pulse-dot 2s infinite',
+              }}
             />
             Extension Live
           </div>
         )}
 
-        {/* Notifications */}
+        {/* Notification bell */}
         <button
-          className="relative w-[30px] h-[30px] rounded-[6px] flex items-center justify-center text-[13px] transition-all duration-100"
+          className="relative flex items-center justify-center rounded-[6px] transition-all duration-100"
           style={{
+            width: '32px',
+            height: '32px',
             background: 'var(--surface-2)',
             border: '1px solid var(--border)',
             color: 'var(--text-2)',
             cursor: 'pointer',
           }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border-md)'
+            e.currentTarget.style.color = 'var(--text)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border)'
+            e.currentTarget.style.color = 'var(--text-2)'
+          }}
         >
-          🔔
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M7 1.5C4.79 1.5 3 3.29 3 5.5V8.5L1.5 10H12.5L11 8.5V5.5C11 3.29 9.21 1.5 7 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+            <path d="M5.5 10.5C5.5 11.33 6.17 12 7 12C7.83 12 8.5 11.33 8.5 10.5" stroke="currentColor" strokeWidth="1.2"/>
+          </svg>
           {hasNotification && (
             <span
-              className="absolute top-[6px] right-[6px] w-[5px] h-[5px] rounded-full"
+              className="absolute rounded-full"
               style={{
+                width: '6px',
+                height: '6px',
+                top: '6px',
+                right: '6px',
                 background: 'var(--amber)',
-                border: '1px solid var(--surface)',
+                border: '1.5px solid var(--surface)',
               }}
             />
           )}
@@ -83,8 +107,10 @@ export default function Topbar({
 
         {/* Avatar */}
         <div
-          className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-[10px] font-bold cursor-pointer"
+          className="flex items-center justify-center rounded-full text-[10px] font-bold cursor-pointer"
           style={{
+            width: '32px',
+            height: '32px',
             background: 'linear-gradient(135deg, #1C2A45, #253452)',
             border: '1px solid var(--accent-border)',
             color: 'var(--accent)',

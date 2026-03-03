@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import Link from 'next/link'
 import PerfStrip from '@/components/perfstrip'
 import ScoreRing from '@/components/scorering'
 import CallsTable from '@/components/callstable'
@@ -7,81 +8,24 @@ import type { CallRow } from '@/components/callstable'
 import type { PerfData } from '@/components/perfstrip'
 
 const PERF_CELLS: PerfData[] = [
-  {
-    icon: '◎',
-    label: 'Calls This Week',
-    value: 12,
-    delta: '4',
-    deltaType: 'up',
-    deltaLabel: 'vs last week',
-    fillWidth: 75,
-    fillColor: 'var(--accent)',
-  },
-  {
-    icon: '◈',
-    label: 'Close Signals',
-    value: 38,
-    accentColor: 'var(--accent)',
-    delta: '12',
-    deltaType: 'up',
-    deltaLabel: 'detected',
-    fillWidth: 88,
-    fillColor: 'var(--teal)',
-  },
-  {
-    icon: '★',
-    label: 'Avg Score',
-    value: 74,
-    delta: '6 pts',
-    deltaType: 'up',
-    deltaLabel: 'improvement',
-    fillWidth: 74,
-    fillColor: 'var(--accent)',
-  },
-  {
-    icon: '✓',
-    label: 'Deals Progressed',
-    value: 5,
-    delta: '2',
-    deltaType: 'up',
-    deltaLabel: 'this week',
-    fillWidth: 50,
-    fillColor: 'var(--green)',
-  },
+  { icon: '◎', label: 'Calls This Week', value: 12, delta: '4', deltaType: 'up', deltaLabel: 'vs last week', fillWidth: 75, fillColor: 'var(--accent)' },
+  { icon: '◈', label: 'Close Signals', value: 38, accentColor: 'var(--teal)', delta: '12', deltaType: 'up', deltaLabel: 'detected', fillWidth: 88, fillColor: 'var(--teal)' },
+  { icon: '★', label: 'Avg Score', value: 74, delta: '6 pts', deltaType: 'up', deltaLabel: 'improvement', fillWidth: 74, fillColor: 'var(--accent)' },
+  { icon: '✓', label: 'Deals Progressed', value: 5, delta: '2', deltaType: 'up', deltaLabel: 'this week', fillWidth: 50, fillColor: 'var(--green)' },
 ]
 
 const SCORE_PILLS = [
-  { label: '↑ Strong open', variant: 'teal' },
-  { label: '✓ Objections handled', variant: 'green' },
-  { label: '⚑ Price pushback', variant: 'amber' },
-  { label: '◈ 3 close signals', variant: 'slate' },
-] as const
+  { label: 'Strong open', bg: 'var(--teal-dim)', color: 'var(--teal)', border: 'var(--teal-border)' },
+  { label: 'Objections handled', bg: 'var(--green-dim)', color: 'var(--green)', border: 'var(--green-border)' },
+  { label: 'Price pushback', bg: 'var(--amber-dim)', color: 'var(--amber)', border: 'var(--amber-border)' },
+  { label: '3 close signals', bg: 'var(--accent-dim)', color: 'var(--accent)', border: 'var(--accent-border)' },
+]
 
 const SIGNAL_ROWS = [
-  {
-    type: 'teal',
-    icon: '◎',
-    text: 'Close signal detected — Marcus asked about onboarding timeline',
-    time: '04:12',
-  },
-  {
-    type: 'green',
-    icon: '✓',
-    text: 'Budget confirmed — "We have allocated Q1 budget for this"',
-    time: '11:38',
-  },
-  {
-    type: 'amber',
-    icon: '⚑',
-    text: 'Competitor mention — Prospect referenced Gong',
-    time: '18:54',
-  },
-  {
-    type: 'red',
-    icon: '⚠',
-    text: 'Risk: Stakeholder not present — decision delayed',
-    time: '31:07',
-  },
+  { type: 'teal', icon: '◎', text: 'Close signal — Marcus asked about onboarding timeline', time: '04:12' },
+  { type: 'green', icon: '✓', text: 'Budget confirmed — Q1 budget allocated', time: '11:38' },
+  { type: 'amber', icon: '⚑', text: 'Competitor mention — Prospect referenced Gong', time: '18:54' },
+  { type: 'red', icon: '⚠', text: 'Risk: Stakeholder not present', time: '31:07' },
 ]
 
 const WIN_RATE_BARS = [
@@ -97,16 +41,10 @@ export default async function DashboardPage() {
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll() },
-        setAll() {},
-      },
-    }
+    { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-
   const { data: rawCalls } = await supabase
     .from('calls')
     .select('id, prospect_name, company, created_at, duration, score, status')
@@ -117,17 +55,15 @@ export default async function DashboardPage() {
     id: c.id,
     name: c.prospect_name ?? 'Unknown',
     company: c.company ?? '—',
-    date: new Date(c.created_at).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    }),
+    date: new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     duration: c.duration ?? '—',
     score: c.score ?? 0,
     status: c.status ?? 'done',
   }))
 
-  const name = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'there'
-  const firstName = name.split(' ')[0]
+  const rawName = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'there'
+  const firstName = rawName.replace(/[._]/g, ' ').split(' ')[0]
+    .replace(/\b\w/g, (c: string) => c.toUpperCase())
 
   const now = new Date()
   const weekLabel = `Week of ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
@@ -135,39 +71,31 @@ export default async function DashboardPage() {
   return (
     <>
       {/* Page header */}
-      <div className="flex items-start justify-between mb-6">
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
         <div>
-          <h1
-            className="text-[18px] font-bold mb-[3px]"
-            style={{ letterSpacing: '-0.04em', color: 'var(--text)' }}
-          >
+          <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.04em', color: 'var(--text)', margin: '0 0 5px' }}>
             Good morning, {firstName}
           </h1>
-          <p className="text-[12px]" style={{ color: 'var(--text-2)' }}>
+          <p style={{ fontSize: '12px', color: 'var(--text-2)', margin: 0 }}>
             {weekLabel} · {calls.length} calls logged
           </p>
         </div>
-        <div className="flex gap-2 items-center">
-          <button
-            className="inline-flex items-center gap-[5px] px-[14px] py-[7px] rounded-[5px] text-[12px] font-semibold transition-all duration-150 font-[inherit] cursor-pointer"
-            style={{
-              background: 'transparent',
-              color: 'var(--text-2)',
-              border: '1px solid var(--border-md)',
-            }}
-          >
-            ↓ Export Report
-          </button>
-          <button
-            className="inline-flex items-center gap-[5px] px-[14px] py-[7px] rounded-[5px] text-[12px] font-semibold transition-all duration-150 font-[inherit] cursor-pointer"
-            style={{
-              background: 'var(--accent)',
-              color: '#0A0F1C',
-              border: '1px solid var(--accent)',
-            }}
-          >
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Link href="/dashboard/calls" style={{
+            display: 'inline-flex', alignItems: 'center', gap: '5px',
+            padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
+            background: 'transparent', color: 'var(--text-2)',
+            border: '1px solid var(--border-md)', textDecoration: 'none',
+          }}>
+            Export Report
+          </Link>
+          <Link href="/dashboard/calls" style={{
+            display: 'inline-flex', alignItems: 'center', gap: '5px',
+            padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+            background: 'var(--accent)', color: '#0A0F1C', border: 'none', textDecoration: 'none',
+          }}>
             + Log Call
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -175,147 +103,90 @@ export default async function DashboardPage() {
       <PerfStrip cells={PERF_CELLS} />
 
       {/* Score hero */}
-      <div
-        className="flex items-center gap-5 rounded-[10px] p-5 mb-5"
-        style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-        }}
-      >
-        <ScoreRing score={74} size={80} />
-
-        <div className="flex-1">
-          <h2
-            className="text-[15px] font-bold mb-1"
-            style={{ letterSpacing: '-0.02em', color: 'var(--text)' }}
-          >
+      <div style={{
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: '12px', padding: '20px 24px', marginBottom: '16px',
+        display: 'flex', alignItems: 'center', gap: '24px',
+      }}>
+        <ScoreRing score={74} size={86} strokeWidth={7} />
+        <div style={{ flex: 1 }}>
+          <h2 style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text)', margin: '0 0 4px' }}>
             Weekly Performance Score
           </h2>
-          <p className="text-[12px] mb-[10px]" style={{ color: 'var(--text-2)' }}>
+          <p style={{ fontSize: '12px', color: 'var(--text-2)', margin: '0 0 12px' }}>
             Based on 12 calls · Above your 30-day average
           </p>
-          <div className="flex gap-[6px] flex-wrap">
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' as const }}>
             {SCORE_PILLS.map((p) => (
-              <span
-                key={p.label}
-                className="inline-flex items-center gap-1 px-2 py-[3px] rounded-[4px] text-[11px] font-medium"
-                style={
-                  p.variant === 'teal'
-                    ? { background: 'var(--teal-dim)', color: 'var(--teal)', border: '1px solid var(--teal-border)' }
-                    : p.variant === 'green'
-                    ? { background: 'var(--green-dim)', color: 'var(--green)', border: '1px solid var(--green-border)' }
-                    : p.variant === 'amber'
-                    ? { background: 'var(--amber-dim)', color: 'var(--amber)', border: '1px solid var(--amber-border)' }
-                    : { background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent-border)' }
-                }
-              >
-                {p.label}
-              </span>
+              <span key={p.label} style={{
+                display: 'inline-flex', alignItems: 'center', padding: '3px 9px',
+                borderRadius: '5px', fontSize: '11px', fontWeight: 500,
+                background: p.bg, color: p.color, border: `1px solid ${p.border}`,
+              }}>{p.label}</span>
             ))}
           </div>
         </div>
-
-        {/* Sparkline */}
-        <div className="flex flex-col items-end gap-1 ml-auto">
-          <div
-            className="text-[10px] font-semibold uppercase"
-            style={{ letterSpacing: '0.06em', color: 'var(--text-3)' }}
-          >
+        <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'flex-end', gap: '6px' }}>
+          <span style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--text-3)' }}>
             Score trend
-          </div>
-          <div className="flex items-end gap-[2px] h-8">
+          </span>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '36px' }}>
             {SPARKLINE.map((v, i) => (
-              <div
-                key={i}
-                className="w-[5px] rounded-[1px_1px_0_0]"
-                style={{
-                  height: `${v}%`,
-                  background: i === SPARKLINE.length - 1 ? 'var(--accent)' : 'var(--surface-3)',
-                  transition: 'height 0.3s',
-                }}
-              />
+              <div key={i} style={{
+                width: '6px', borderRadius: '2px 2px 0 0',
+                height: `${(v / 100) * 36}px`,
+                background: i === SPARKLINE.length - 1 ? 'var(--accent)' : 'var(--surface-3)',
+              }} />
             ))}
           </div>
         </div>
       </div>
 
-      {/* Main grid: calls table + right widgets */}
-      <div
-        className="grid gap-4 mb-4"
-        style={{ gridTemplateColumns: '1fr 340px' }}
-      >
+      {/* Main grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '16px' }}>
         <CallsTable calls={calls} />
 
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '12px' }}>
           {/* Live Signals */}
-          <div
-            className="rounded-[10px] p-4 mb-3"
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
-          >
-            <div
-              className="text-[10px] font-bold uppercase flex items-center justify-between mb-3"
-              style={{ letterSpacing: '0.09em', color: 'var(--text-3)' }}
-            >
-              Live Signals
-              <span className="text-[10px] font-medium normal-case" style={{ letterSpacing: 0, color: 'var(--text-2)' }}>
-                Today
-              </span>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: 'var(--text-3)' }}>Live Signals</span>
+              <span style={{ fontSize: '10px', color: 'var(--text-3)' }}>Today</span>
             </div>
-            <div className="flex flex-col gap-[7px]">
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '7px' }}>
               {SIGNAL_ROWS.map((sig, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-[9px] px-[10px] py-[7px] rounded-[6px]"
-                  style={{
-                    background:
-                      sig.type === 'teal' ? 'var(--teal-dim)'
-                      : sig.type === 'green' ? 'var(--green-dim)'
-                      : sig.type === 'amber' ? 'var(--amber-dim)'
-                      : 'var(--red-dim)',
-                    border: '1px solid var(--border)',
-                    borderLeft: `2px solid var(--${sig.type})`,
-                  }}
-                >
-                  <div
-                    className="w-[22px] h-[22px] rounded-[4px] flex items-center justify-center text-[11px] flex-shrink-0"
-                    style={{ background: 'rgba(255,255,255,0.04)' }}
-                  >
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'flex-start', gap: '9px',
+                  padding: '8px 10px', borderRadius: '8px',
+                  background: sig.type === 'teal' ? 'var(--teal-dim)' : sig.type === 'green' ? 'var(--green-dim)' : sig.type === 'amber' ? 'var(--amber-dim)' : 'var(--red-dim)',
+                  border: '1px solid var(--border)',
+                  borderLeft: `2px solid var(--${sig.type})`,
+                }}>
+                  <div style={{ width: '20px', height: '20px', borderRadius: '5px', flexShrink: 0, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>
                     {sig.icon}
                   </div>
-                  <div className="text-[11.5px] leading-[1.4] flex-1" style={{ color: 'var(--text)' }}>
-                    {sig.text}
-                  </div>
-                  <div className="text-[9.5px] flex-shrink-0" style={{ color: 'var(--text-3)' }}>
-                    {sig.time}
-                  </div>
+                  <div style={{ flex: 1, fontSize: '11.5px', lineHeight: 1.45, color: 'var(--text)' }}>{sig.text}</div>
+                  <span style={{ fontSize: '9.5px', color: 'var(--text-3)', flexShrink: 0 }}>{sig.time}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Skill Breakdown */}
-          <div
-            className="rounded-[10px] p-4"
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
-          >
-            <div
-              className="text-[10px] font-bold uppercase mb-3"
-              style={{ letterSpacing: '0.09em', color: 'var(--text-3)' }}
-            >
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px' }}>
+            <span style={{ display: 'block', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: 'var(--text-3)', marginBottom: '14px' }}>
               Skill Breakdown
-            </div>
-            <div className="flex flex-col gap-[10px]">
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '12px' }}>
               {WIN_RATE_BARS.map((bar) => (
-                <div key={bar.label} className="flex items-center justify-between gap-3">
-                  <span className="text-[11px] w-[70px] flex-shrink-0" style={{ color: 'var(--text-2)' }}>
-                    {bar.label}
-                  </span>
-                  <div className="flex-1 h-[3px] rounded-[2px]" style={{ background: 'var(--surface-3)' }}>
-                    <div className="h-full rounded-[2px]" style={{ width: `${bar.pct}%`, background: bar.color }} />
+                <div key={bar.label}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                    <span style={{ fontSize: '11.5px', color: 'var(--text-2)' }}>{bar.label}</span>
+                    <span style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--text)' }}>{bar.pct}%</span>
                   </div>
-                  <span className="text-[11px] font-bold min-w-[28px] text-right" style={{ color: 'var(--text)' }}>
-                    {bar.pct}%
-                  </span>
+                  <div style={{ height: '4px', borderRadius: '2px', background: 'var(--surface-3)' }}>
+                    <div style={{ height: '100%', borderRadius: '2px', width: `${bar.pct}%`, background: bar.color }} />
+                  </div>
                 </div>
               ))}
             </div>
