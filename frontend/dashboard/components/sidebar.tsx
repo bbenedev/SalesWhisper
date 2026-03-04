@@ -4,28 +4,30 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 
-const NAV_SECTIONS = [
+type NavItem = { icon: string; label: string; href: string }
+
+const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Workspace',
     items: [
-      { icon: '▣', label: 'Dashboard', href: '/dashboard' },
-      { icon: '◎', label: 'Calls', href: '/dashboard/calls', badge: '12' },
-      { icon: '◈', label: 'Library', href: '/dashboard/library' },
-      { icon: '◫', label: 'Analytics', href: '/dashboard/analytics' },
+      { icon: '▣', label: 'Dashboard',   href: '/dashboard'            },
+      { icon: '◎', label: 'Calls',       href: '/dashboard/calls'      },
+      { icon: '◈', label: 'Library',     href: '/dashboard/library'    },
+      { icon: '◫', label: 'Analytics',   href: '/dashboard/analytics'  },
     ],
   },
   {
     label: 'Team',
     items: [
-      { icon: '⊞', label: 'Members', href: '/dashboard/members', badge: '8' },
-      { icon: '◷', label: 'Reports', href: '/dashboard/reports' },
+      { icon: '⊞', label: 'Members',     href: '/dashboard/members'    },
+      { icon: '◷', label: 'Reports',     href: '/dashboard/reports'    },
     ],
   },
   {
     label: 'System',
     items: [
-      { icon: '◇', label: 'Settings', href: '/dashboard/settings' },
-      { icon: '⊙', label: 'Integrations', href: '/dashboard/integrations' },
+      { icon: '◇', label: 'Settings',    href: '/dashboard/settings'   },
+      { icon: '⊙', label: 'Integrations',href: '/dashboard/integrations'},
     ],
   },
 ]
@@ -43,6 +45,7 @@ export default function Sidebar({ userName = 'User', userRole = 'Sales Rep', use
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard'
+    if (href === '/dashboard/calls') return pathname.startsWith('/dashboard/calls') || pathname.startsWith('/dashboard/call/')
     return pathname.startsWith(href)
   }
 
@@ -135,21 +138,36 @@ export default function Sidebar({ userName = 'User', userRole = 'Sales Rep', use
                     {item.icon}
                   </span>
                   <span style={{ flex: 1 }}>{item.label}</span>
-                  {'badge' in item && item.badge && (
-                    <span style={{
-                      fontSize: '9.5px', fontWeight: 600, padding: '1px 5px',
-                      borderRadius: '10px', background: 'var(--surface-3)',
-                      color: 'var(--text-3)', border: '1px solid var(--border)',
-                    }}>
-                      {item.badge}
-                    </span>
-                  )}
                 </Link>
               )
             })}
           </div>
         ))}
       </nav>
+
+      {/* Live Call CTA */}
+      <div style={{ padding: '8px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+        <Link
+          href="/dashboard/call/live"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '9px 12px', borderRadius: '8px', textDecoration: 'none',
+            background: 'linear-gradient(135deg, rgba(139,157,181,0.12), rgba(107,127,154,0.08))',
+            border: '1px solid var(--accent-border)', marginBottom: '6px',
+            transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(139,157,181,0.18)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'linear-gradient(135deg, rgba(139,157,181,0.12), rgba(107,127,154,0.08))')}
+        >
+          <div style={{
+            width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+            background: 'var(--green)', boxShadow: '0 0 6px rgba(34,197,94,0.6)',
+            animation: 'pulse-dot 2s infinite',
+          }} />
+          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', flex: 1 }}>Start Live Call</span>
+          <span style={{ fontSize: '10px', color: 'var(--accent)' }}>→</span>
+        </Link>
+      </div>
 
       {/* Footer */}
       <div style={{ padding: '8px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>

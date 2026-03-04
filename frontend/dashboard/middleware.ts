@@ -22,13 +22,32 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
+  const { pathname } = request.nextUrl
 
-  const isPublic = request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/register')
+  const isPublic     = pathname.startsWith('/login') || pathname.startsWith('/register')
+  const isOnboarding = pathname.startsWith('/onboarding')
 
+  // Not logged in → login
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
+
+  // Logged in, new user → onboarding (skip if already there)
+  if (user && !isPublic && !isOnboarding) {
+    const onboardingDone = user.user_metadata?.onboarding_complete
+    if (!onboardingDone) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/onboarding'
+      return NextResponse.redirect(url)
+    }
+  }
+
+  // Logged in, already onboarded → skip onboarding
+  if (user && isOnboarding && user.user_metadata?.onboarding_complete) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
 
@@ -36,5 +55,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/dashboard'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }

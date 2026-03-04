@@ -1,10 +1,7 @@
-import type { Metadata } from 'next'
 import Sidebar from '@/components/sidebar'
 import Topbar from '@/components/topbar'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-
-export const metadata: Metadata = { title: 'SalesWhisper' }
 
 export default async function DashboardLayout({
   children,
@@ -53,9 +50,10 @@ export default async function DashboardLayout({
 
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minWidth: 0 }}>
         <Topbar
+          userName={name}
           userInitials={initials || 'U'}
+          userEmail={user?.email ?? ''}
           extensionLive={false}
-          hasNotification={true}
         />
         <main
           style={{
