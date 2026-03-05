@@ -41,3 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 .vscode
+.MIGRATOION_GUIDE.md
+.requirements.txt
+.saleswhisper-master.docx
+.de que trata sales whisper.txt

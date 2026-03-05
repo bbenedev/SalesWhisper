@@ -1,208 +1,177 @@
 'use client'
-
-import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
 
-type NavItem = { icon: string; label: string; href: string }
+type Props = { userName: string; userRole: string; userInitials: string }
 
-const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
-  {
-    label: 'Workspace',
-    items: [
-      { icon: '▣', label: 'Dashboard',   href: '/dashboard'            },
-      { icon: '◎', label: 'Calls',       href: '/dashboard/calls'      },
-      { icon: '◈', label: 'Library',     href: '/dashboard/library'    },
-      { icon: '◫', label: 'Analytics',   href: '/dashboard/analytics'  },
-    ],
-  },
-  {
-    label: 'Team',
-    items: [
-      { icon: '⊞', label: 'Members',     href: '/dashboard/members'    },
-      { icon: '◷', label: 'Reports',     href: '/dashboard/reports'    },
-    ],
-  },
-  {
-    label: 'System',
-    items: [
-      { icon: '◇', label: 'Settings',    href: '/dashboard/settings'   },
-      { icon: '⊙', label: 'Integrations',href: '/dashboard/integrations'},
-    ],
-  },
-]
-
-interface SidebarProps {
-  userName?: string
-  userRole?: string
-  userInitials?: string
+// ─── Clean professional SVG icons ─────────────────────────────────────────────
+const Icons = {
+  Dashboard: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+  ),
+  Calls: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.56 2 2 0 0 1 3.56 1.38h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6 6l1-1a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+    </svg>
+  ),
+  Library: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+    </svg>
+  ),
+  Analytics: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+  ),
+  Members: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  Reports: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+    </svg>
+  ),
+  Settings: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  ),
+  Integrations: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="6" height="6" rx="1"/><rect x="16" y="3" width="6" height="6" rx="1"/>
+      <rect x="9" y="15" width="6" height="6" rx="1"/>
+      <path d="M5 9v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/>
+      <line x1="12" y1="12" x2="12" y2="15"/>
+    </svg>
+  ),
 }
 
-export default function Sidebar({ userName = 'User', userRole = 'Sales Rep', userInitials = 'U' }: SidebarProps) {
+const NAV = [
+  { section:'WORKSPACE', items:[
+    { icon: Icons.Dashboard,    label:'Dashboard',    href:'/dashboard'             },
+    { icon: Icons.Calls,        label:'Calls',        href:'/dashboard/calls'       },
+    { icon: Icons.Library,      label:'Library',      href:'/dashboard/library'     },
+    { icon: Icons.Analytics,    label:'Analytics',    href:'/dashboard/analytics'   },
+  ]},
+  { section:'TEAM', items:[
+    { icon: Icons.Members,      label:'Members',      href:'/dashboard/members'     },
+    { icon: Icons.Reports,      label:'Reports',      href:'/dashboard/reports'     },
+  ]},
+  { section:'SYSTEM', items:[
+    { icon: Icons.Settings,     label:'Settings',     href:'/dashboard/settings'    },
+    { icon: Icons.Integrations, label:'Integrations', href:'/dashboard/integrations'},
+  ]},
+]
+
+export default function Sidebar({ userName, userRole, userInitials }: Props) {
   const pathname = usePathname()
-  const router = useRouter()
-  const supabase = createClient()
+  const router   = useRouter()
 
-  const isActive = (href: string) => {
-    if (href === '/dashboard') return pathname === '/dashboard'
-    if (href === '/dashboard/calls') return pathname.startsWith('/dashboard/calls') || pathname.startsWith('/dashboard/call/')
-    return pathname.startsWith(href)
-  }
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
-  }
+  const isActive = (href: string) =>
+    href === '/dashboard'
+      ? pathname === '/dashboard'
+      : pathname.startsWith(href)
 
   return (
-    <aside style={{
-      width: '210px', flexShrink: 0, display: 'flex', flexDirection: 'column',
-      height: '100%', background: 'var(--surface)', borderRight: '1px solid var(--border)',
+    <div style={{
+      width:'188px', height:'100vh', display:'flex', flexDirection:'column',
+      background:'var(--surface)', borderRight:'1px solid var(--border)',
+      flexShrink:0, overflow:'hidden',
     }}>
-      {/* Brand */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '10px',
-        padding: '18px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0,
-      }}>
-        <div style={{
-          width: '28px', height: '28px', borderRadius: '7px', flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '11px', fontWeight: 800,
-          background: 'linear-gradient(135deg, #8B9DB5, #6B7F9A)',
-          color: '#0A0F1C', letterSpacing: '-0.05em',
-        }}>
-          SW
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-          <span style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text)' }}>
-            SalesWhisper
-          </span>
-          <span style={{ fontSize: '9px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginTop: '2px' }}>
-            Enterprise
-          </span>
+      {/* ── Logo — clean waveform mark ── */}
+      <div style={{ padding:'18px 16px 14px', borderBottom:'1px solid var(--border)' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+          {/* Logomark: microphone + waveform combined */}
+          <div style={{
+            width:'32px', height:'32px', borderRadius:'9px',
+            background:'linear-gradient(135deg, #6ee7f7 0%, #3b82f6 50%, #8b5cf6 100%)',
+            display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+            boxShadow:'0 2px 8px rgba(99,102,241,0.35)',
+          }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              {/* Mic body */}
+              <rect x="9" y="2" width="6" height="11" rx="3" fill="white" opacity="0.95"/>
+              {/* Mic arc */}
+              <path d="M5 11a7 7 0 0 0 14 0" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none"/>
+              {/* Stem */}
+              <line x1="12" y1="18" x2="12" y2="21" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="9" y1="21" x2="15" y2="21" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontSize:'13.5px', fontWeight:800, color:'var(--text)', letterSpacing:'-0.03em', lineHeight:1 }}>
+              SalesWhisper
+            </div>
+            <div style={{ fontSize:'9px', fontWeight:700, color:'var(--text-3)', letterSpacing:'0.12em', textTransform:'uppercase' as const, marginTop:'2px' }}>
+              ENTERPRISE
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
-        {NAV_SECTIONS.map((section) => (
-          <div key={section.label} style={{ marginBottom: '20px' }}>
-            <p style={{
-              fontSize: '9px', fontWeight: 600, textTransform: 'uppercase',
-              letterSpacing: '0.12em', color: 'var(--text-3)',
-              padding: '0 8px', marginBottom: '6px', margin: '0 0 6px',
-            }}>
-              {section.label}
-            </p>
-            {section.items.map((item) => {
+      {/* ── Nav ── */}
+      <nav style={{ flex:1, overflowY:'auto', padding:'10px 8px' }}>
+        {NAV.map(group => (
+          <div key={group.section} style={{ marginBottom:'18px' }}>
+            <div style={{ fontSize:'9.5px', fontWeight:700, letterSpacing:'0.12em', color:'var(--text-3)', padding:'0 8px', marginBottom:'4px' }}>
+              {group.section}
+            </div>
+            {group.items.map(item => {
               const active = isActive(item.href)
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
+                <button key={item.href}
+                  onClick={()=>router.push(item.href)}
                   style={{
-                    position: 'relative', display: 'flex', alignItems: 'center',
-                    gap: '9px', padding: '8px 10px', borderRadius: '7px',
-                    marginBottom: '2px', textDecoration: 'none', fontSize: '12.5px',
-                    fontWeight: active ? 500 : 400,
+                    width:'100%', display:'flex', alignItems:'center', gap:'9px',
+                    padding:'8px 10px', borderRadius:'8px', cursor:'pointer',
+                    fontFamily:'inherit', border:'none', textAlign:'left' as const,
+                    fontSize:'13px', fontWeight: active ? 600 : 400,
+                    color: active ? 'var(--accent)' : 'var(--text-2)',
                     background: active ? 'var(--accent-dim)' : 'transparent',
-                    color: active ? 'var(--text)' : 'var(--text-2)',
-                    transition: 'background 0.12s, color 0.12s',
+                    marginBottom:'1px', transition:'all 0.1s',
                   }}
-                  onMouseEnter={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                      e.currentTarget.style.color = 'var(--text)'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.background = 'transparent'
-                      e.currentTarget.style.color = 'var(--text-2)'
-                    }
-                  }}
-                >
+                  onMouseEnter={e=>{ if(!active) e.currentTarget.style.background='rgba(255,255,255,0.04)' }}
+                  onMouseLeave={e=>{ if(!active) e.currentTarget.style.background='transparent' }}>
                   {active && (
-                    <span style={{
-                      position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-                      width: '2px', height: '16px', background: 'var(--accent)',
-                      borderRadius: '0 2px 2px 0',
-                    }} />
+                    <div style={{ position:'absolute', left:0, width:'3px', height:'22px', borderRadius:'0 2px 2px 0', background:'var(--accent)' }} />
                   )}
-                  <span style={{
-                    width: '15px', textAlign: 'center', fontSize: '13px', flexShrink: 0,
-                    color: active ? 'var(--accent)' : 'inherit',
-                    opacity: active ? 1 : 0.65,
-                  }}>
-                    {item.icon}
-                  </span>
-                  <span style={{ flex: 1 }}>{item.label}</span>
-                </Link>
+                  <item.icon />
+                  {item.label}
+                </button>
               )
             })}
           </div>
         ))}
       </nav>
 
-      {/* Live Call CTA */}
-      <div style={{ padding: '8px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
-        <Link
-          href="/dashboard/call/live"
+      {/* ── Start Live Call CTA ── */}
+      <div style={{ padding:'10px 10px 12px', borderTop:'1px solid var(--border)' }}>
+        <button onClick={()=>router.push('/dashboard/call/live')}
           style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '9px 12px', borderRadius: '8px', textDecoration: 'none',
-            background: 'linear-gradient(135deg, rgba(139,157,181,0.12), rgba(107,127,154,0.08))',
-            border: '1px solid var(--accent-border)', marginBottom: '6px',
-            transition: 'all 0.15s',
+            width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
+            padding:'10px 12px', borderRadius:'9px', cursor:'pointer', fontFamily:'inherit',
+            border:'1px solid var(--green-border)', background:'var(--green-dim)',
+            color:'var(--green)', fontSize:'12.5px', fontWeight:700, transition:'all 0.15s',
           }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(139,157,181,0.18)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'linear-gradient(135deg, rgba(139,157,181,0.12), rgba(107,127,154,0.08))')}
-        >
-          <div style={{
-            width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
-            background: 'var(--green)', boxShadow: '0 0 6px rgba(34,197,94,0.6)',
-            animation: 'pulse-dot 2s infinite',
-          }} />
-          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', flex: 1 }}>Start Live Call</span>
-          <span style={{ fontSize: '10px', color: 'var(--accent)' }}>→</span>
-        </Link>
+          onMouseEnter={e=>{ e.currentTarget.style.background='var(--green)'; e.currentTarget.style.color='#0A0F1C' }}
+          onMouseLeave={e=>{ e.currentTarget.style.background='var(--green-dim)'; e.currentTarget.style.color='var(--green)' }}>
+          <span style={{ display:'flex', alignItems:'center', gap:'7px' }}>
+            <span style={{ width:'7px', height:'7px', borderRadius:'50%', background:'currentColor', display:'inline-block' }}/>
+            Start Live Call
+          </span>
+          <span style={{ fontSize:'14px', opacity:0.7 }}>→</span>
+        </button>
       </div>
-
-      {/* Footer */}
-      <div style={{ padding: '8px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
-        <div
-          onClick={handleSignOut}
-          title="Sign out"
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '8px 10px', borderRadius: '7px', cursor: 'pointer',
-            transition: 'background 0.12s',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-        >
-          <div style={{
-            width: '26px', height: '26px', borderRadius: '50%', flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '10px', fontWeight: 700,
-            background: 'linear-gradient(135deg, #1C2A45, #253452)',
-            border: '1px solid var(--accent-border)', color: 'var(--accent)',
-          }}>
-            {userInitials}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {userName}
-            </div>
-            <div style={{ fontSize: '10px', color: 'var(--text-3)' }}>{userRole}</div>
-          </div>
-          <div style={{
-            width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
-            background: 'var(--green)', boxShadow: '0 0 5px rgba(34,197,94,0.4)',
-          }} />
-        </div>
-      </div>
-    </aside>
+    </div>
   )
 }
